@@ -68,7 +68,7 @@ def check_metadata(mdata):
 
 def process_dir(extract_path, cu_path, partition_path):
     """
-    REcursively process a directory and pushing documents to S3 with a partitioning corresponding to the path below
+    Recursively process a directory and store documents to S3 with a partitioning corresponding to the path below
     the extract_path.
     :param extract_path: The path where the recursive discovery starts
     :param cu_path: the path below the extract_path

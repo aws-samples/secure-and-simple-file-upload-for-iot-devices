@@ -11,7 +11,7 @@ import json
 import argparse
 import hashlib
 import requests
-from datetime import datetime
+from datetime import datetime, UTC
 
 # MQTT topics
 TOPIC_BASE = "awsSample/iotDocUpload"
@@ -32,6 +32,7 @@ def on_connection_failure(connection, callback_data):
         print("Connection failed with error code: {}".format(callback_data.error))
     else:
         print("Connection failed")
+
 
 # Callback when a connection has been disconnected or shutdown successfully
 def on_connection_closed(connection, callback_data):
@@ -139,7 +140,11 @@ def make_request(args, connection):
     }
     if args.bad_payload is True:
         payload.pop('md5')
-    topic = "{}/{}/{}/{}".format(TOPIC_BASE, "docUpldReq", args.client_id, datetime.utcnow().isoformat())
+    topic = "{}/{}/{}/{}".format(
+        TOPIC_BASE,
+        "docUpldReq",
+        args.client_id,
+        datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"))
     print("Publishing message to topic '{}': {}".format(topic, payload))
     publish_future, packet_id = connection.publish(
         topic=topic,
@@ -156,6 +161,7 @@ class ReceiveCallbacks(object):
         self.received_response = threading.Event()
         self.received_ack = threading.Event()
         self.timeout = timeout
+        self.success = False
 
     def on_response_received(self, topic, payload, dup, qos, retain, **kwargs):
         print("Received RESPONSE message from topic '{}': {}".format(topic, payload))
@@ -165,24 +171,50 @@ class ReceiveCallbacks(object):
         exp = data.get('expiration')
         headers = data.get('headers')
         if not url:
-            print("Upload request was rejected. The document will not be uploaded.")
+            print("Upload request was rejected. The document will not be uploaded to S3.")
         else:
-            print("Uploading document {}".format(args.archive_path))
+            print("Uploading document {} to S3".format(self.args.archive_path))
             result = requests.put(
                 url=url,
                 data=open(self.args.archive_path, 'rb'),
                 headers=headers,
                 timeout=3)
-            print("Upload result: code={}, content={}".format(result, result.content))
+            print("Upload to S3 result: code={}, content={}".format(result, result.content))
         self.received_response.set()
 
     def on_ack_received(self, topic, payload, dup, qos, retain, **kwargs):
-        print("Received ACK message from topic '{}': {}".format(topic, payload))
+        info = json.loads(payload)
+        print("Received ACK message from topic '{}': {}".format(topic, info))
+        if info.get('success') is True:
+            print("Transaction successful!")
+            self.success = True
+        elif info.get('success') is False:
+            print("Transaction failed!")
+        else:
+            print("Transaction Status unknown")
+            self.success = None
         self.received_ack.set()
 
     def wait_for_responses(self):
         self.received_response.wait(timeout=self.timeout)
         self.received_ack.wait(timeout=self.timeout)
+
+
+def test_client(args):
+    """
+    Main job
+    :param args: parser library arguments
+    :return: True for a success, False for a Failure, None for unexpected result
+    """
+    receiver = ReceiveCallbacks(args)
+    mqtt_connection = initialise(args, receiver)
+    make_request(args, mqtt_connection)
+    receiver.wait_for_responses()
+
+    print("Disconnecting")
+    mqtt_connection.disconnect()
+
+    return receiver.success
 
 
 if __name__ == '__main__':
@@ -192,23 +224,17 @@ if __name__ == '__main__':
                                                           "Ex: \"abcd123456wxyz-ats.iot.us-east-1.amazonaws.com\"")
     parser.add_argument("--port", required=False, default=8883, type=int, choices=[8883, 443],
                         help="Specify port. AWS IoT supports 443 and 8883.")
-    parser.add_argument('--cert', help="File path to your client certificate, in PEM format.")
-    parser.add_argument('--key', help="File path to your private key, in PEM format.")
-    parser.add_argument('--root_ca', help="File path to root certificate authority, in PEM format. " +
-                                          "Necessary if MQTT server uses a certificate that's not already in your trust store.")
+    parser.add_argument('--cert', required=True, help="File path to your client certificate, in PEM format.")
+    parser.add_argument('--key', required=True, help="File path to your private key, in PEM format.")
+    parser.add_argument('--root_ca', required=True, help="File path to root certificate authority, in PEM format. "
+                                                         "Necessary if MQTT server uses a certificate that's not "
+                                                         "already in your trust store.")
     parser.add_argument('--client_id', required=True, help="Client ID for MQTT connection.")
-    parser.add_argument("--archive_path", required=True, help="Path to the archive file to upload")
+    parser.add_argument("--archive_path", required=True, help="Path to the archive (zip) file to upload")
     parser.add_argument("--bad_md5", action=argparse.BooleanOptionalAction, default=False, help="Test for bad MD5 hash")
     parser.add_argument("--bad_payload", action=argparse.BooleanOptionalAction, default=False,
                         help="Test for bad payload")
 
-    args = parser.parse_args()
+    print("Upload Successful: {}".format(test_client(parser.parse_args())))
+    print("Goodbye!")
 
-    receiver = ReceiveCallbacks(args)
-    mqtt_connection = initialise(args, receiver)
-    make_request(args, mqtt_connection)
-    receiver.wait_for_responses()
-
-    print("Disconnecting")
-    mqtt_connection.disconnect()
-    print("Googbye!")
