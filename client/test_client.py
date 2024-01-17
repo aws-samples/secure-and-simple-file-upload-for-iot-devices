@@ -16,18 +16,22 @@ from datetime import datetime
 # MQTT topics
 TOPIC_BASE = "awsSample/iotDocUpload"
 
+
 # Callback when the connection successfully connects
 def on_connection_success(connection, callback_data):
-    assert isinstance(callback_data, mqtt.OnConnectionSuccessData)
-    print("Connection Successful with return code: {} session present: {}".format(callback_data.return_code,
-                                                                                  callback_data.session_present))
+    if isinstance(callback_data, mqtt.OnConnectionSuccessData):
+        print("Connection Successful with return code: {} session present: {}".format(callback_data.return_code,
+                                                                                      callback_data.session_present))
+    else:
+        print("Connection Successful")
 
 
 # Callback when a connection attempt fails
 def on_connection_failure(connection, callback_data):
-    assert isinstance(callback_data, mqtt.OnConnectionFailureData)
-    print("Connection failed with error code: {}".format(callback_data.error))
-
+    if isinstance(callback_data, mqtt.OnConnectionFailureData):
+        print("Connection failed with error code: {}".format(callback_data.error))
+    else:
+        print("Connection failed")
 
 # Callback when a connection has been disconnected or shutdown successfully
 def on_connection_closed(connection, callback_data):
@@ -123,7 +127,10 @@ def make_request(args, connection):
         print("File {} does not exist".format(args.archive_path))
         return
     if args.bad_md5 is not True:
-        md5 = hashlib.md5(open(args.archive_path, 'rb').read()).hexdigest()
+        md5 = hashlib.new(
+            name='md5',
+            data=open(args.archive_path, 'rb').read(),
+            usedforsecurity=False).hexdigest()
     else:
         md5 = "11111111111111111111111111111111"
     payload = {
@@ -143,7 +150,7 @@ def make_request(args, connection):
 
 
 class ReceiveCallbacks(object):
-    def __init__(self, args, timeout=5):
+    def __init__(self, args, timeout=7):
         self.args = args
         # Events tracking
         self.received_response = threading.Event()
@@ -161,7 +168,11 @@ class ReceiveCallbacks(object):
             print("Upload request was rejected. The document will not be uploaded.")
         else:
             print("Uploading document {}".format(args.archive_path))
-            result = requests.put(url=url, data=open(self.args.archive_path, 'rb'), headers=headers)
+            result = requests.put(
+                url=url,
+                data=open(self.args.archive_path, 'rb'),
+                headers=headers,
+                timeout=3)
             print("Upload result: code={}, content={}".format(result, result.content))
         self.received_response.set()
 
@@ -201,4 +212,3 @@ if __name__ == '__main__':
     print("Disconnecting")
     mqtt_connection.disconnect()
     print("Googbye!")
-

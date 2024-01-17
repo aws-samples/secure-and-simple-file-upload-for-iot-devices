@@ -1,2 +1,3 @@
 [bandit]
-targets = ./client, ./app/function/src
+targets = client,app/function/src
+exclude = ./.venv,./app/node_modules,./app/cdk.out
