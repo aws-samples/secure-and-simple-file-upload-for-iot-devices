@@ -18,6 +18,12 @@ The project is split in two parts:
 * For running the client:
   * install python if not already done. This project has been tested with python 3.12.
   * pip install requirements
+  * create the test archives (they are not created because an archive constitutes a security risk when checked-in):
+    ```bash
+    cd client/test_data
+    bash make_test_data.sh
+    cd ../..
+    ```
 
 ## Usage
 * Deploy and configure your cloud infrastructure (with CDK). See [cloud-side documentation](app/README.md).

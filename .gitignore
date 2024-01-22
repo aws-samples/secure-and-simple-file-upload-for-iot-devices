@@ -1,0 +1,14 @@
+.gitignore
+.venv
+app/cdk.out
+app/node_modules
+client/creds
+client/run_test_local.sh
+code_review
+/documentation/.$architecture_diagram.drawio.bkp
+
+*.zip
+
+*.js
+!jest.config.js
+*.d.ts
