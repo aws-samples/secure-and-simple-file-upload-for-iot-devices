@@ -44,7 +44,7 @@ Nothing new planned for now. Make suggestions!
 
 
 ## License
-[See LICENSE.ms](./LICENSE.md)
+[See LICENSE](./LICENSE)
 
 ## Project status
 Active support.
