@@ -28,6 +28,9 @@ cdk bootstrap
 # Then deploy the solution on your account
 cdk deploy
 ```
+The CDK will create a static IoT Thing Group called `uploaderThingGroup` and an IoT Policy called `uploaderPolicy`. 
+At this time, attaching a Policy to a Thing Group is not supporting by CDK. So you will have
+[to do this manually](https://docs.aws.amazon.com/iot/latest/developerguide/thing-groups.html#group-attach-policy), ONCE.
 
 #### Useful CDK commands
 

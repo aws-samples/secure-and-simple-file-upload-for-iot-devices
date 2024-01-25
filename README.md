@@ -27,7 +27,7 @@ The project is split in two parts:
 
 ## Usage
 * Deploy and configure your cloud infrastructure (with CDK). See [cloud-side documentation](app/README.md).
-* Create an AWS IoT thing and download it certificate, private key and CA certificate.
+* Create an AWS IoT thing and download its certificate, private key and CA certificate.
   * Do NOT create policy for the Thing Certificate
   * Add the IoT Thing to the group `uploaderThingGroup`
 * Edit the client runner `client/run_test.sh` and modify the configuration section at the top to match your setup.
