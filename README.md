@@ -14,6 +14,7 @@ The project is split in two parts:
 
 ## Installation
 
+* Clone the repository: `git clone git@github.com:aws-samples/secure-and-simple-file-upload-for-iot-devices.git`
 * Follow the instructions in the [cloud-side documentation](app/README.md)
 * For running the client:
   * install python if not already done. This project has been tested with python 3.12.
